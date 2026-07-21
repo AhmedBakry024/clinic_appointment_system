@@ -1,13 +1,15 @@
-FROM python:3.12-slim AS builder
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+FROM node:22-alpine AS builder
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm ci
 COPY . .
 
-FROM python:3.12-slim AS runner
-WORKDIR /app
-COPY --from=builder /root/.local /root/.local
-COPY --from=builder /app ./
-ENV PATH=/root/.local/bin:$PATH
-EXPOSE 8000
-CMD ["python", "app.py"]
+FROM node:22-alpine AS runner
+ENV NODE_ENV=production
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY --from=builder /usr/src/app ./
+USER node
+EXPOSE 3000
+CMD ["node", "index.js"]
